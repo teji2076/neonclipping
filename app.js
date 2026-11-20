@@ -3,7 +3,8 @@ let id=null,still=null,sourceW=0,sourceH=0,sourceDuration=0,mode='cam',layout='s
 let rectEdited=false,layoutClicked=false,layoutSpecs={},editingClip=null,layoutLoadSerial=0;
 let rect={cam:{x:0,y:0,w:.25,h:.3},game:{x:.25,y:0,w:.75,h:1}};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const status=t=>$('status').textContent=t;
+function sourceErrorText(value){const text=String(value||'');return /sign in to confirm you.?re not a bot/i.test(text)?'YouTube blocked this cloud-server download. Upload the original MP4 instead, then press Make clips. If you have subtitles, import the SRT/VTT to keep their timing.':text;}
+const status=t=>{const host=$('status');host.textContent=sourceErrorText(t);if(/sign in to confirm you.?re not a bot/i.test(String(t))){const button=document.createElement('button');button.type='button';button.textContent='Upload original MP4';button.onclick=()=>$('file').click();host.append(document.createTextNode(' '),button);}};
 async function request(path,body){const response=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.detail||'Request failed');return data;}
 function signature(){return [id,Number($('start').value),Number($('end').value),$('language').value].join(':');}
 function clearWords(){words=null;wordRange='';$('words').replaceChildren();}
@@ -24,7 +25,7 @@ $('link').onclick=async()=>{
    await sleep(700);
   }
  })();pendingImport=operation;
- try{await operation;}catch(e){$('link-status').textContent=e.message;status(e.message);}finally{if(token===importToken){pendingImport=null;$('link').disabled=false;}}
+ try{await operation;}catch(e){$('link-status').textContent=sourceErrorText(e.message);status(e.message);}finally{if(token===importToken){pendingImport=null;$('link').disabled=false;}}
  if(token===importToken&&id&&$('auto-analyze').checked&&!$('analyze').disabled)await $('analyze').onclick();
 };
 $('file').onchange=async()=>{try{if(!$('file').files[0])return;++importToken;pendingImport=null;id=null;still=null;$('link').disabled=false;$('frames').replaceChildren();status('Uploading source…');const form=new FormData();form.append('file',$('file').files[0]);const response=await fetch('/upload',{method:'POST',body:form});const j=await response.json();if(!response.ok)throw Error(j.detail);$('url').value='';setSource(j);setRange(0,Math.min(30,j.duration));$('link-status').textContent='File ready';status('Draw the facecam and gameplay areas.');}catch(e){status(e.message);}};
